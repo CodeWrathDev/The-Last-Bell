@@ -30,6 +30,8 @@ export class ChapterState {
   }
   /** Only the creature hunts, and only in Chapters 3-4, and again after the reveal. */
   get monsterActive() { return this.chapter === 'ch3' || this.chapter === 'ch4' || this.girlForm === 'crawler'; }
+  /** Harmless apparitions begin in Chapter 1; the real creature still waits until Chapter 3. */
+  get hauntingActive() { return this.chapter !== 'prologue'; }
   get companionActive() { return (this.chapter === 'ch5' || this.chapter === 'final') && this.girlForm === 'human'; }
   get identityRevealed() { return this.girlForm === 'crawler'; }
   get canEscape() { return false; }        // canon: the player never escapes

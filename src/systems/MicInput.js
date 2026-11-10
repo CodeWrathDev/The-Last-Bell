@@ -14,17 +14,17 @@ import { Settings } from './Settings.js';
 export function levelToEvent(rms, threshold = MIC_THRESHOLD, cooldownOk = true) {
   if (!cooldownOk || rms < threshold) return null;
   const loud = Math.min(1, (rms - threshold) / 0.3);          // 0..1 above threshold
-  return { type: 'voice', loudness: 0.3 + 0.5 * loud, radius: 80 + 200 * loud, duration: 0.6 };
+  return { type: 'voice', loudness: 0.4 + 0.55 * loud, radius: 220 + 380 * loud, duration: 0.9 };
 }
 
-export const MIC_THRESHOLD = 0.07;   // boosted level above the room's own noise that counts as a noise the monster can hear (the white line on the bar)
+export const MIC_THRESHOLD = 0.045;  // boosted level above room noise that the monster can hear
 export const MIC_FULL_SCALE = 0.25;  // boosted level shown as a full bar
-export const MIC_SUSTAIN = 0.15;     // seconds the sound must stay above the line before it counts
+export const MIC_SUSTAIN = 0.1;      // seconds the sound must stay above the line before it counts
 export const MIC_CALIBRATE = 1.2;    // seconds spent measuring the room's own noise after the mic starts (no events during this)
 export const MIC_SENS_MIN = 0.5;
 export const MIC_SENS_MAX = 5;
 export const MIC_SENS_STEP = 0.5;
-export const MIC_SENS_DEFAULT = 2;
+export const MIC_SENS_DEFAULT = 3;
 const FLOOR_MAX = 0.04;              // the room-noise estimate never rises above this, so a loud voice can never "hide" itself
 
 export const MIC_STATUS_TEXT = { off: 'OFF', asking: 'ALLOW MIC', calibrating: 'CALIBRATING', listening: 'LISTENING', denied: 'BLOCKED', nosignal: 'NO SIGNAL', nomic: 'NO MIC', insecure: 'NEEDS HTTPS', error: 'ERROR' };

@@ -129,7 +129,10 @@ export class GameScene extends Phaser.Scene {
   onChapter(ch) {
     this.meta = this.stateMeta(this.map.meta);
     this.chapterCard();
-    if (ch === 'ch3') this.ghostT = 25;   // chapter 3 starts straight in the game (no story cutscene)
+    if (ch === 'ch3') {
+      if (this.ghost?.phantom) this.removeGhost();
+      this.ghostT = 4;
+    }
     this.saveGame();
   }
 
@@ -333,7 +336,9 @@ export class GameScene extends Phaser.Scene {
     this.doorCD = 0.9; this.blackout = 0; this.ambientEventT = 24 + Math.random() * 34;
 
     // Ghost spawns after a grace period.
-    this.ghostT = m.meta.ghostPatrol ? (m.meta.ghostDelay ?? 15) : Infinity;
+    this.ghostT = m.meta.ghostPatrol
+      ? this.story.chapter === 'ch3' ? Math.min(m.meta.ghostDelay ?? 15, 5) : (m.meta.ghostDelay ?? 15)
+      : Infinity;
 
     // Ambience
     const ms = this.story.mapState;
@@ -861,7 +866,6 @@ export class GameScene extends Phaser.Scene {
     const front = cands.filter((c) => c.da < 0.5), pool = front.length ? front : cands.slice(0, 3), at = pool[Math.floor(Math.random() * pool.length)];
     this.emergeCD = chase ? 60 + Math.random() * 30 : 18 + Math.random() * 14; this.phantomT = chase ? PHANTOM_SHOW : 0.7; this.phantomChase = chase;
     if (!g) {
-      const pts = this.meta.ghostPatrol.map(([tx, ty]) => ({ x: tx * TILE + 16, y: ty * TILE + 16 }));
       this.ghost = new Ghost(this, { x: at.x, y: at.y, patrol: [], grid: this.grid });
       this.ghost.brain.setHideSpots(this.hideSpots); this.track(this.ghost);
     } else { g.brain.body.x = at.x; g.brain.body.y = at.y; g.brain.path = null; g.brain.pathGoal = null; g.brain.state = 'patrol'; }
@@ -889,8 +893,8 @@ export class GameScene extends Phaser.Scene {
     this.quietPhantomT = (this.quietPhantomT ?? 22 + Math.random() * 25) - dt;
     if (this.quietPhantomT > 0) return;
     const p = this.player, g = this.ghost;
-    const ok = this.story.monsterActive && this.meta.ghostPatrol && !this.finalPhase && !this.cutsceneActive && !p.hidden && !(this.phantomT > 0) && !(this.dreadT > 0) && !((this.emergeCD ?? 0) > 0)
-      && !(g && (g.glimpse || g.state === 'chase' || g.state === 'listen' || g.state === 'search')) && !(!g && this.ghostT === Infinity);
+    const ok = this.story.hauntingActive && !this.finalPhase && !this.cutsceneActive && !p.hidden && !(this.phantomT > 0) && !(this.dreadT > 0) && !((this.emergeCD ?? 0) > 0)
+      && !(g && (g.glimpse || g.state === 'chase' || g.state === 'listen' || g.state === 'search'));
     if (!ok) { this.quietPhantomT = 8; return; }
     this.quietPhantomT = 28 + Math.random() * 32;
     this.spawnPhantom(null, false);
@@ -902,7 +906,7 @@ export class GameScene extends Phaser.Scene {
     this.nervousT = (this.nervousT ?? 10 + Math.random() * 8) - dt;
     if (this.nervousT > 0) return;
     const p = this.player, g = this.ghost;
-    const ok = this.story.monsterActive && this.meta.ghostPatrol && !this.finalPhase && !this.cutsceneActive && !p.hidden && !(this.phantomT > 0) && !(this.dreadT > 0)
+    const ok = this.story.hauntingActive && !this.finalPhase && !this.cutsceneActive && !p.hidden && !(this.phantomT > 0) && !(this.dreadT > 0)
       && !(g && (g.glimpse || g.chasing || g.state === 'chase' || g.state === 'listen' || g.state === 'search'));
     if (!ok) { this.nervousT = 5; return; }
     this.nervousT = 9 + Math.random() * 11;
@@ -935,10 +939,10 @@ export class GameScene extends Phaser.Scene {
   noiseAccum(e) {
     const p = this.player;
     if (!this.story.monsterActive || !this.meta.ghostPatrol || this.finalPhase || this.cutsceneActive || this.ghostT > 0 || this.dreadT > 0 || this.phantomT > 0 || p.hidden) return;
-    const w = { walk: 0.1, run: 0.45, door: 0.6, door_slam: 1.5, drop: 1.5, break: 2, voice: 0.5, throw: 1.2, pickup: 0.1 }[e.type];
+    const w = { walk: 0.2, run: 0.7, door: 0.7, door_slam: 1.5, drop: 1.5, break: 2, voice: 0.8, throw: 1.2, pickup: 0.15 }[e.type];
     if (!w) return;
     this.hearAcc = (this.hearAcc ?? 0) + w;
-    if (this.hearAcc >= 2) { this.hearAcc = 0; this.summonGhost(e); }
+    if (this.hearAcc >= 1.2) { this.hearAcc = 0; this.summonGhost(e); }
   }
 
   /** A GLIMPSE: for at most 3 seconds something crawls through the edge of your sight - a few tiles away, in front of you - and then it is simply
@@ -1070,7 +1074,11 @@ export class GameScene extends Phaser.Scene {
     if (this.phantomT > 0) { this.phantomT -= dt; if (this.phantomT <= 0) this.endPhantom(); }
     if (this.dreadT > 0) { this.dreadT -= dt; if (this.dreadT <= 0) this.launchCharge(); }
     if (!this.story.monsterActive) {
-      if (this.ghost) { this.disposables = this.disposables.filter((d) => d !== this.ghost); this.ghost.destroy(); this.ghost = null; }
+      if (this.ghost?.phantom) {
+        this.ghost.update(dt, { px: p.body.x, py: p.body.y, hidden: p.hidden, hideTile: p.hideTile, flashOn: p.flashOn });
+      } else if (this.ghost) {
+        this.disposables = this.disposables.filter((d) => d !== this.ghost); this.ghost.destroy(); this.ghost = null;
+      }
       this.updateThreat(); return;
     }
     this.hearAcc = Math.max(0, (this.hearAcc ?? 0) - dt * 0.6);   // noise fades from its memory

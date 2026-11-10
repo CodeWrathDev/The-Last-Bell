@@ -39,6 +39,12 @@ Import the repo in Vercel. It detects Vite automatically (build `npm run build`,
 
 Touch controls appear automatically on touch devices (add `?touch=1` to the URL to force them).
 
+## Phone play, look direction, dark hall (v44)
+* **Phones**: the first tap goes fullscreen and locks landscape (Android Chrome). While the phone is upright a "turn your phone" screen covers the game and the game is paused. iPhone Safari cannot lock rotation: turn the phone by hand, or use Add to Home Screen (fullscreen + landscape via `public/manifest.webmanifest`). Code: `src/systems/MobileFit.js`, `index.html`.
+* **Touch buttons**: smaller, and only E, Light, Hide, Run, Sneak, Chalk remain (Batt and Snd removed: batteries are used from the Bag, mute is in the pause menu; the duplicate Map button is hidden because the minimap is tappable).
+* **Vertical look is reversed** (mouse, click-drag and touch drag): `RIG.INVERT_Y` in `src/render3d/Rig3D.js`. Set it to `false` for the normal direction.
+* **Hallway is much darker**: `ambient` (higher = darker) and the tube / lamp / window / exit-sign intensities in `src/maps/hall.js`. Raise `ambient` toward 0.9 or the tube `intensity` if it is too dark.
+
 ## First-person view (v43)
 The game is now **first person**: the camera sits at your eyes, you see your hand and flashlight, the beam starts at your head, you can look up and down, the view bobs with your steps, sinks when you sneak, shows the desk underside while you hide, and falls toward the creature when it catches you.
 Switch it off with `RIG.FIRST_PERSON = false` in `src/render3d/Rig3D.js` (the old third-person follow camera is still there). Hand/flashlight drawing lives in `src/render3d/FpOverlay.js`.

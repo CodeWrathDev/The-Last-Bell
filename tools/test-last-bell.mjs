@@ -30,8 +30,8 @@ const run = (m, sec, w, dt = 1 / 30) => { for (let i = 0; i < sec / dt; i++) m.u
 test('louder sounds carry farther than quiet ones', () => {
   const bus = new SoundBus(), g = null;
   const walk = bus.emit('walk', 0, 0), run_ = bus.emit('run', 0, 0), slam = bus.emit('door_slam', 0, 0);
-  assert.equal(perceived(walk, 150, 0, g), 0);
-  assert.ok(perceived(run_, 150, 0, g) > 0);
+  assert.ok(perceived(walk, 150, 0, g) > 0);
+  assert.ok(perceived(run_, 150, 0, g) > perceived(walk, 150, 0, g));
   assert.ok(perceived(slam, 300, 0, g) > 0);
   assert.ok(SOUND.run.radius > SOUND.walk.radius && SOUND.break.radius > SOUND.door_slam.radius);
 });
@@ -170,6 +170,18 @@ test('monster hunts only in Ch3-4 (then after the reveal); companion only in Ch5
   assert.equal(by.ch3[1], true); assert.equal(by.ch4[1], true);
   assert.deepEqual([by.ch5[1], by.ch5[2]], [false, true]);
 });
+test('harmless scares start in Chapter 1, but the real monster waits until Chapter 3', () => {
+  const s = new ChapterState();
+  assert.equal(s.hauntingActive, false);
+  s.setFlag('prologue_done');
+  assert.equal(s.chapter, 'ch1');
+  assert.equal(s.hauntingActive, true);
+  assert.equal(s.monsterActive, false);
+  s.setFlag('transformed');
+  s.setFlag('power_on');
+  assert.equal(s.chapter, 'ch3');
+  assert.equal(s.monsterActive, true);
+});
 test('final sequence runs in strict order; identity is hidden until transform; no escape, no attack', () => {
   const s = new ChapterState(); for (const f of ['prologue_done', 'transformed', 'power_on', 'has_office_key', 'photo_seen', 'records_found', 'bullies_found', 'reunion', 'gate_approach']) s.setFlag(f);
   assert.equal(s.chapter, 'final'); assert.equal(s.identityRevealed, false);
@@ -278,7 +290,7 @@ test('companion follows the player down the real hallway and through the courtya
 });
 
 test('optional microphone: quiet room makes no event, loud shout makes a big one', () => {
-  assert.equal(levelToEvent(0.01), null); assert.equal(levelToEvent(0.05), null, 'normal room noise is ignored');
+  assert.equal(levelToEvent(0.01), null); assert.equal(levelToEvent(0.03), null, 'quiet room noise is ignored');
   const talk = levelToEvent(0.16), shout = levelToEvent(0.55);
   assert.ok(talk && shout && shout.radius > talk.radius && shout.loudness > talk.loudness);
   assert.equal(levelToEvent(0.45, 0.12, false), null);
@@ -327,7 +339,7 @@ console.log(`\n${n} tests passed`);
 // ---------- v33: real-horror behaviour ----------
 test('v33 a quiet noise makes it CREEP (slow, no roar); a loud one makes it charge', () => {
   const g = grid(), q = mk({ grid: g, seed: 3 }), l = mk({ grid: g, seed: 3 });
-  q.hear({ id: 1, x: c(5) + 20, y: c(3), loudness: 0.3, radius: 100, duration: 0.4 });   // soft footstep, close: perceived ~0.2
+  q.hear({ id: 1, x: c(5) + 20, y: c(3), loudness: 0.2, radius: 100, duration: 0.4 });   // faint footstep, close: perceived below the charge threshold
   assert.equal(q.state, MS.CHASE); assert.ok(q.cautious && q.events.includes('creep') && !q.events.includes('rush'));
   l.hear({ id: 2, x: c(9), y: c(3), loudness: 0.8, radius: 260, duration: 0.5 });
   assert.ok(!l.cautious && l.events.includes('rush'));

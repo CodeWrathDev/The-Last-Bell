@@ -12,6 +12,7 @@ export const RIG = {
   HIDE_EYE: 0.55,     // eye height while hiding under a desk
   FP_FLASH_BOOM: 0.8, // flashlight reach offset in first person (the beam starts at the eyes)
   PITCH_MAX: 46,      // look up/down limit, in screen pixels of horizon shift (buffer is 270 px tall)
+  INVERT_Y: true,     // vertical look is reversed: move the mouse / finger UP to look DOWN, and DOWN to look UP. Set false for the normal direction.
   BOOM: 3.4,          // ideal distance behind the player
   MIN_BOOM: 2.7,      // the camera may sink into a wall behind the player (the renderer skips faces behind it) rather than crowd the player
   POS_LAG: 7.5,       // camera position smoothing (1/s): higher = snappier
@@ -26,10 +27,12 @@ export class Rig3D {
     this.heading = 0; this.yaw = 0; this.ix = 0; this.iy = 0; this.x = 0; this.y = 0; this.boom = RIG.BOOM; this.pitch = 0;
   }
 
-  /** Mouse / touch look: dx = radians of turn, dy = pixels of pitch (positive = look down). */
+  /** Mouse / touch look: dx = radians of turn, dy = raw vertical pointer movement in pixels (down = positive).
+   *  With RIG.INVERT_Y (default) the vertical axis is reversed, so every look input (mouse, drag, touch) shares one setting. */
   lookBy(dx, dy = 0) {
     this.heading = wrap(this.heading + dx);
-    this.pitch = Math.max(-RIG.PITCH_MAX, Math.min(RIG.PITCH_MAX, this.pitch + dy));
+    const d = RIG.INVERT_Y ? -dy : dy;
+    this.pitch = Math.max(-RIG.PITCH_MAX, Math.min(RIG.PITCH_MAX, this.pitch + d));
   }
 
   turn(dt, amount) { this.heading = wrap(this.heading + amount * RIG.TURN * dt); }

@@ -25,10 +25,15 @@ await test('a noisy room (fan / traffic, steady 0.03) never makes the monster he
 await test('room noise that slowly changes (0.01 -> 0.05) does not trigger either', async () => {
   const { m, ev } = await make(2); run(m, 2, 0.01); run(m, 90, (t) => 0.01 + 0.04 * Math.min(1, t / 90)); assert.equal(ev.length, 0);
 });
-await test('talking (0.12) fills the bar and makes a voice noise; stopping makes the bar fall', async () => {
+await test('talking (0.12) fills the bar and makes a far-reaching voice noise; stopping makes the bar fall', async () => {
   const { m, ev } = await make(2); run(m, 2, 0.01); run(m, 1.5, 0.12);
   assert.ok(m.level / MIC_FULL_SCALE > 0.6, 'bar fill ' + m.level / MIC_FULL_SCALE); assert.ok(ev.length >= 1 && ev.every((e) => e.type === 'voice'));
+  assert.ok(ev.some((e) => e.radius >= 350), 'the monster can hear voice from across a room');
   run(m, 2, 0.01); assert.ok(m.level < 0.02);
+});
+await test('a softer voice triggers at the default sensitivity', async () => {
+  const { m, ev } = await make(3); run(m, 2, 0.01); run(m, 1, 0.04);
+  assert.ok(ev.length >= 1, 'default sensitivity catches a soft voice');
 });
 await test('a single click / cough spike (60 ms) is ignored', async () => {
   const { m, ev } = await make(2); run(m, 2, 0.01); run(m, 0.06, 0.4); run(m, 2, 0.01); assert.equal(ev.length, 0);

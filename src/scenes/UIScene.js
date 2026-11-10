@@ -67,7 +67,7 @@ export class UIScene extends Phaser.Scene {
     const q = typeof location !== 'undefined' ? location.search : '';
     const realTouch = () => typeof window !== 'undefined' && ((navigator.maxTouchPoints || 0) > 0 || 'ontouchstart' in window)
       && !!window.matchMedia?.('(pointer: coarse)').matches;
-    const enableTouch = () => { if (this.touchBuilt) return; this.touchBuilt = true; touch.enabled = true; this.buildTouch(); };
+    const enableTouch = () => { if (this.touchBuilt) return; this.touchBuilt = true; touch.enabled = true; this.buildTouch(); this.slimHudForTouch(); };
     if (/[?&]touch=0/.test(q)) { /* forced off */ }
     else if (/[?&]touch=1/.test(q) || realTouch()) enableTouch();
     else {
@@ -149,13 +149,14 @@ export class UIScene extends Phaser.Scene {
     // small always-available buttons next to the minimap
     const mk = (x, label, fn) => {
       const b = this.add.nineslice(x, 38, 'ui', 'ui_button', 38, 34, 8, 8, 8, 8).setDepth(11).setInteractive({ useHandCursor: true });
-      ltxt(this, x, 38, label, 14).setOrigin(0.5).setDepth(12);
+      const l = ltxt(this, x, 38, label, 14).setOrigin(0.5).setDepth(12);
       b.on('pointerdown', fn); b.on('pointerover', () => b.setTexture('ui', 'ui_button_active')); b.on('pointerout', () => b.setTexture('ui', 'ui_button'));
+      (this.hudBtns = this.hudBtns || []).push({ b, l, label });
       return b;
     };
     mk(this.miniX - 34, 'II', () => { if (!this.over) this.togglePause(); });
     this.bagBtn = mk(this.miniX - 76, 'Bag', () => this.toggleInventory());
-    mk(this.miniX - 118, 'Map', () => this.toggleBigMap());
+    mk(this.miniX - 118, 'Map', () => this.toggleBigMap());   // (hidden on touch devices: tapping the minimap opens the same map)
   }
 
   refreshObjective() {
@@ -494,6 +495,13 @@ export class UIScene extends Phaser.Scene {
   }
 
   // ---------------------------------------------------------------- touch controls
+  /** Phones: drop the duplicate Map button (the minimap is tappable) and make the remaining top buttons smaller. */
+  slimHudForTouch() {
+    for (const h of this.hudBtns || []) {
+      if (h.label === 'Map') { h.b.setVisible(false); h.b.disableInteractive(); h.l.setVisible(false); continue; }
+      h.b.setScale(0.82); h.l.setScale(0.82);
+    }
+  }
   buildTouch() {
     this.stick = { id: null, ox: 0, oy: 0 }; this.look = { id: null, x: 0, y: 0 };
     this.touchBtns = []; this.touchLit = [];
@@ -501,11 +509,11 @@ export class UIScene extends Phaser.Scene {
     this.stickKnob = this.add.circle(0, 0, 26, 0xffffff, 0.35).setDepth(16).setVisible(false);
     window.addEventListener('contextmenu', (e) => e.preventDefault());             // no long-press menu on phones
     const buzz = (ms = 12) => { try { navigator.vibrate?.(ms); } catch (e) { /* not supported */ } };
-    // One round button. The finger target is 35% bigger than the drawn circle so a thumb never misses it. `lit()` = is its toggle on.
+    // One round button. The finger target is 30% bigger than the drawn circle so a thumb never misses it. `lit()` = is its toggle on.
     const btn = (x, y, r, label, down, lit) => {
-      const c = this.add.circle(x, y, r, 0x141a2e, 0.7).setStrokeStyle(3, 0x8fa0cf, 0.85).setDepth(15)
-        .setInteractive(new Phaser.Geom.Circle(r, r, r * 1.35), Phaser.Geom.Circle.Contains);
-      const lab = ltxt(this, x, y, label, r > 40 ? 22 : 16, '#ffffff').setOrigin(0.5).setDepth(16);
+      const c = this.add.circle(x, y, r, 0x141a2e, 0.7).setStrokeStyle(2, 0x8fa0cf, 0.8).setDepth(15)
+        .setInteractive(new Phaser.Geom.Circle(r, r, r * 1.3), Phaser.Geom.Circle.Contains);
+      const lab = ltxt(this, x, y, label, r > 30 ? 20 : 12, '#ffffff').setOrigin(0.5).setDepth(16);
       c.on('pointerdown', () => { c.setFillStyle(0x2b3a6a, 0.9); buzz(); down(); });
       const rel = () => c.setFillStyle(lit?.() ? 0x3f5ea8 : 0x141a2e, lit?.() ? 0.9 : 0.7);
       c.on('pointerup', rel); c.on('pointerout', rel);
@@ -513,21 +521,21 @@ export class UIScene extends Phaser.Scene {
       this.touchBtns.push(c, lab);
     };
     const R = VIEW_W, B = VIEW_H, pl = () => this.gs.player;
-    // Right-thumb layout (bottom-right corner, nothing under the minimap / noise meter): big E in the corner, the rest in an arc around it.
-    btn(R - 100, B - 100, 52, 'E', () => { touch.q.interact = true; });
-    btn(R - 215, B - 62, 38, 'Light', () => { touch.q.flash = true; }, () => !!pl()?.flashOn);
-    btn(R - 100, B - 225, 38, 'Run', () => { touch.run = !touch.run; }, () => touch.run);          // tap to toggle (a finger is free for E / camera)
-    btn(R - 215, B - 168, 38, 'Hide', () => { touch.q.hide = true; });
-    btn(R - 330, B - 62, 34, 'Sneak', () => { touch.q.crouch = true; }, () => !!pl()?.crouch);   // slow + quiet + body low (tap again to stand)
-    btn(R - 330, B - 150, 34, 'Chalk', () => { touch.q.throw = true; });                          // throw chalk to distract it
-    btn(R - 215, B - 268, 30, 'Batt', () => { if (!this.modal) this.toast(this.gs.useItem('battery')); });
-    btn(R - 330, B - 238, 30, 'Snd', () => this.toggleMute());
+    // Right-thumb cluster, kept small and tucked into the bottom-right corner (clear of the minimap and the noise/mic meters).
+    // Only what is needed in play: E, Light, Hide, Run, Sneak, Chalk. Bag / Pause / Map are in the top HUD, mute is in the pause menu,
+    // and batteries are used from the Bag, so the old Batt and Snd buttons are gone.
+    btn(R - 60, B - 70, 34, 'E', () => { touch.q.interact = true; });
+    btn(R - 135, B - 45, 25, 'Light', () => { touch.q.flash = true; }, () => !!pl()?.flashOn);
+    btn(R - 125, B - 110, 25, 'Hide', () => { touch.q.hide = true; });
+    btn(R - 200, B - 45, 23, 'Run', () => { touch.run = !touch.run; }, () => touch.run);          // tap to toggle (a finger is free for E / camera)
+    btn(R - 190, B - 105, 23, 'Sneak', () => { touch.q.crouch = true; }, () => !!pl()?.crouch);   // slow + quiet + body low (tap again to stand)
+    btn(R - 255, B - 75, 23, 'Chalk', () => { touch.q.throw = true; });                           // throw chalk to distract it
     this.events.on('update', () => { for (const t of this.touchLit) t.rel(); });
 
-    // Portrait phones shrink the 960x540 view a lot: grow the buttons so they stay tappable (they scale around their own centres).
+    // Keep the small buttons about 20 css px in radius on any screen (they scale around their own centres): shrinks on big screens, grows a little on tiny ones.
     const fit = () => {
       const cv = this.game.canvas, w = cv?.clientWidth || window.innerWidth;
-      const k = Phaser.Math.Clamp(34 / (w / VIEW_W * 30), 1, 1.6);   // aim for ~34 css px radius on the small buttons
+      const k = Phaser.Math.Clamp(20 / (w / VIEW_W * 25), 0.8, 1.35);
       this.touchBtns.forEach((o) => o.setScale(k));
     };
     fit(); window.addEventListener('resize', fit); window.addEventListener('orientationchange', fit);
@@ -586,7 +594,7 @@ export class UIScene extends Phaser.Scene {
     // --- microphone
     const mx = this.micBX, on = Settings.get('microphone'), live = !!mic?.active && mic.status === 'listening', cal = !!mic?.active && mic.status === 'calibrating';
     const voice = mic?.active ? Math.min(1, mic.shown ?? 0) : 0, tl = mic?.active ? (mic.trig ?? 0.5) : 0.5;   // v44: dB volume meter + movable trigger line
-    const ml = Math.max(voice, lvl);                                                           // v42: the MIC bar shows EVERYTHING the monster can hear: your voice AND walking, running, door slams
+    const ml = voice;
     this.micPeak = Math.max(ml, (this.micPeak ?? 0) - this.game.loop.delta / 1000 * 0.25);
     g.fillStyle(0x05070f, 0.9).fillRect(mx, y, w, h);
     g.fillStyle(ml >= 0.6 || (live && voice >= tl) ? 0xff4a3a : ml >= 0.25 ? 0xe8c46a : 0x56d27a, 1).fillRect(mx, y + h - fh(ml), w, fh(ml));

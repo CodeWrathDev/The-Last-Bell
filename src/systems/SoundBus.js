@@ -3,10 +3,10 @@ import { hasLOS } from './Collision.js';
 // Every noise the player (or a thrown object) makes becomes an event. Monsters subscribe and decide for themselves.
 // radius is in pixels (TILE = 32). loudness 0..1.
 export const SOUND = {
-  // v16 HARDER: every noise carries ~60-70% farther than before, and crouching is no longer nearly silent.
-  crouch:    { loudness: 0.12, radius: 32,  duration: 0.3 },
-  walk:      { loudness: 0.4,  radius: 90,  duration: 0.4 },
-  run:       { loudness: 0.75, radius: 260, duration: 0.5 },
+  // Footsteps carry far enough for the stalker to react across a room or corridor.
+  crouch:    { loudness: 0.18, radius: 90,  duration: 0.4 },
+  walk:      { loudness: 0.5,  radius: 190, duration: 0.55 },
+  run:       { loudness: 0.9,  radius: 420, duration: 0.7 },
   flashlight:{ loudness: 0.25, radius: 60,  duration: 0.2 },
   pickup:    { loudness: 0.35, radius: 80,  duration: 0.3 },
   door:      { loudness: 0.6,  radius: 250, duration: 0.7 },
@@ -14,7 +14,7 @@ export const SOUND = {
   throw:     { loudness: 0.7,  radius: 280, duration: 0.8 }, // used to distract: emitted where the object lands
   drop:      { loudness: 0.9,  radius: 420, duration: 1.0 },
   break:     { loudness: 1.0,  radius: 560, duration: 1.4 },
-  voice:     { loudness: 0.65, radius: 320, duration: 0.8 }, // optional microphone noise (MicInput)
+  voice:     { loudness: 0.75, radius: 500, duration: 1.0 }, // optional microphone noise (MicInput)
 };
 
 export const WALL_FACTOR = 0.5; // sound with no clear line to the listener carries half as far

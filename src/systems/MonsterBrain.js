@@ -24,14 +24,14 @@ import { perceived } from './SoundBus.js';
 export const MS = {
   PATROL: 'patrol', CHASE: 'chase', LISTEN: 'listen', SEARCH: 'search', RETURN_TO_PATROL: 'return_to_patrol',
 };
-export const SPEED = { patrol: 50, chase: 122, ret: 62, hunt: 134, creep: 58, lunge: 142, search: 56 };   // v16: faster - walking away from a chase no longer works, you must hide
+export const SPEED = { patrol: 54, chase: 146, ret: 68, hunt: 164, creep: 76, lunge: 162, search: 66 };
 // FINAL CHAPTER: once the girl has turned, the creature is no longer blind. It SEES you and never stops (hunt 128 > walk 95, < run 165,
 // so sprinting buys you a few seconds, but stamina runs out and there is nowhere to go).
-export const HEARING = 1.1;      // its ears are better than ours: every sound carries 30% farther for it
-export const SOUND_MEMORY = 1.0; // seconds it keeps charging after the LAST sound it heard (a bit more than one walking step gap, 0.4 s)
+export const HEARING = 1.55;
+export const SOUND_MEMORY = 1.6;
 export const LISTEN_TIME = 4.2;
 export const SEARCH_TIME = 11;   // seconds it searches around the last noise before it gives up and goes back to patrol
-export const LOUD = 0.28;        // perceived loudness at which a noise makes it CHARGE (below this it only CREEPS toward it)
+export const LOUD = 0.2;         // softer sounds now make it charge instead of merely creeping
 export const LUNGE_DIST = 5 * TILE;  // seconds it stands frozen and listening after the noise stops
 const tileOf = (v) => Math.floor(v / TILE);
 
@@ -67,7 +67,7 @@ export class MonsterBrain {
   hear(ev) {
     if (this.stunT > 0 || this.hunting) return false;   // (a hunter that can already see you does not need to listen)
     const p = perceived({ ...ev, radius: ev.radius * HEARING * (1 + this.aggro * 0.25) }, this.x, this.y, this.grid);
-    if (p < 0.1) return false;   // faint, far-away sounds (a soft footstep at the edge of its range) do not wake it
+    if (p < 0.05) return false;
     // Position estimate gets worse with distance and with quiet sounds.
     const d = Math.hypot(ev.x - this.x, ev.y - this.y), err = d * 0.12 * (1 - p);
     const a = this.rng() * Math.PI * 2;

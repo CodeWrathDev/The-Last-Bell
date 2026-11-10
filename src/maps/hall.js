@@ -15,7 +15,7 @@ export function buildHall() {
   const m = new MapBuilder('hall', W, H, T.WALLINT);
   m.meta = {
     name: 'Main Building – Four-Wing Junction', outdoor: false, rain: false,
-    ambient: 0.86, bgm: 'hum', fluorescent: true, ghostDelay: 12,
+    ambient: 0.95, bgm: 'hum', fluorescent: true, ghostDelay: 12,
     ghostPatrol: [[3, 5], [13, 5], [25, 5], [38, 5], [48, 5], [8, 3], [24, 3], [37, 9], [47, 11]],
     zoom: 2, apparition: { ends: [[3, 5], [48, 5]], delay: 34 },
   };
@@ -102,13 +102,14 @@ export function buildHall() {
   // clock sprite made the E prompt look like a clock instead of a document.
   m.addObject({ type: 'note', x: px(25), y: px(9), w: px(2), h: px(1), sprite: 'item_note', text: 'A maintenance note: "The atrium clock ticks backwards whenever the lights flicker."' });
   // (v43: the benches were removed; see the lived-in dressing below.)
-  for (const [x, y] of [[6, 5], [12, 5], [24, 5], [35, 5], [46, 5], [8, 10], [24, 10], [37, 10], [47, 10]]) m.addObject({ type: 'light', x: px(x) + 16, y: px(y), light: 118, flicker: (x + y) % 3 === 0, tube: [px(x), y] });
-  for (const [x, y] of [[2, 5], [49, 5], [21, 9], [30, 9]]) m.addObject({ type: 'light', x: px(x) + 16, y: px(y), light: 62, tint: 0xff3030, intensity: 0.52, pulse: true });
+  // v44 scary hall: the fluorescent tubes are weak, sickly and nearly all stuttering (only two hold steady); the red emergency lamps are dimmer.
+  for (const [x, y] of [[6, 5], [12, 5], [24, 5], [35, 5], [46, 5], [8, 10], [24, 10], [37, 10], [47, 10]]) m.addObject({ type: 'light', x: px(x) + 16, y: px(y), light: 92, intensity: 0.42, tint: 0xa9bfb8, flicker: !((x === 24 && y === 5) || (x === 37 && y === 10)), tube: [px(x), y] });
+  for (const [x, y] of [[2, 5], [49, 5], [21, 9], [30, 9]]) m.addObject({ type: 'light', x: px(x) + 16, y: px(y), light: 54, tint: 0xff3030, intensity: 0.34, pulse: true });
 
   // ---- v43: lived-in dressing (windows, plants, bins, clutter, wall art, fans, lamps, leaks). Nothing here blocks a doorway or a route.
   const win = (x, y, curtain) => {
     m.set('deco', x, y, T.WINDOWRAIN);
-    m.addObject({ type: 'light', x: px(x) + 16, y: y === 1 ? px(2) : px(16) + 16, light: 56, tint: 0x6a8ad8, intensity: 0.34 });
+    m.addObject({ type: 'light', x: px(x) + 16, y: y === 1 ? px(2) : px(16) + 16, light: 50, tint: 0x6a8ad8, intensity: 0.14 });
     if (curtain) m.addObject({ type: 'decor', sprite: 'curtain_0', anim: 'fx_curtain', x: px(x) + 16, y: px(1) - 4, w: 0, h: 0, blocks: false, depth: 'wall', oy: 0 });
   };
   for (const x of [10, 12, 24, 26, 37, 39, 48]) win(x, 1, true);           // rainy windows on the north wall (with curtains)
@@ -126,14 +127,14 @@ export function buildHall() {
   for (const [sp, y] of [['poster', 5.5], ['timetable', 6.3], ['calendar', 12], ['poster', 14.5]]) art(sp, px(50), px(y));    // east wall
   m.addObject({ type: 'decor', sprite: 'exit_sign', x: px(45) + 32, y: px(1) + 2, w: 0, h: 0, blocks: false, depth: 'wall', oy: 0 });
   m.addObject({ type: 'decor', sprite: 'exit_sign', x: px(46) + 32, y: px(17) + 4, w: 0, h: 0, blocks: false, depth: 'wall', oy: 0 });
-  m.addObject({ type: 'light', x: px(46) + 32, y: px(16) + 8, light: 46, tint: 0x40ff90, intensity: 0.42 });
-  m.addObject({ type: 'light', x: px(45) + 32, y: px(2) + 4, light: 46, tint: 0x40ff90, intensity: 0.42 });
+  m.addObject({ type: 'light', x: px(46) + 32, y: px(16) + 8, light: 40, tint: 0x40ff90, intensity: 0.26 });
+  m.addObject({ type: 'light', x: px(45) + 32, y: px(2) + 4, light: 40, tint: 0x40ff90, intensity: 0.26 });
   // The only things on the floor are readable papers.
   m.addObject({ type: 'note', sprite: 'item_note', x: px(12), y: px(6), w: 32, h: 32, text: 'A pinned notice, the ink smeared: \"After the last bell, never answer if someone calls your name from a classroom.\"' });
   m.addObject({ type: 'note', sprite: 'item_note', x: px(36), y: px(14), w: 32, h: 32, text: 'A torn attendance slip. Every name is crossed out in red except yours.' });
   m.addObject({ type: 'note', sprite: 'item_note', x: px(6), y: px(11), w: 32, h: 32, text: 'A hall-monitor memo: \"Do not run. Do not shout. It cannot see you. It only hears you.\"' });
   for (const [fx, fy] of [[25, 8], [10, 5], [40, 5], [25, 14]]) m.addObject({ type: 'decor', sprite: 'fan_0', anim: 'fx_fan', x: px(fx), y: px(fy), w: 0, h: 0, blocks: false, depth: 'above', oy: 0.5, alpha: 0.9 });
-  for (const [x, y, fl] of [[11, 3, false], [27, 3, true], [38, 15, false], [8, 15, true]]) m.addObject({ type: 'light', x: px(x) + 16, y: px(y), light: 72, tint: 0xffc060, intensity: 0.6, flicker: fl });
+  for (const [x, y, fl] of [[11, 3, false], [27, 3, true], [38, 15, false], [8, 15, true]]) m.addObject({ type: 'light', x: px(x) + 16, y: px(y), light: 56, tint: 0xffc060, intensity: 0.26, flicker: true });
   m.meta.leaks = [[10, 9], [26, 12], [38, 6], [6, 15], [24, 3]];
 
   return m;

@@ -9,6 +9,7 @@ import { GameScene } from './scenes/GameScene.js';
 import { UIScene } from './scenes/UIScene.js';
 import { CutsceneScene } from './scenes/CutsceneScene.js';
 import { installReadableText } from './ui/textStyle.js';
+import { installMobileFit } from './systems/MobileFit.js';
 
 function startGame() {
   installReadableText();
@@ -26,6 +27,7 @@ function startGame() {
     scene: [BootScene, MenuScene, GameScene, UIScene, CutsceneScene],
   });
   window.__game = game; // handy for debugging / screenshot tooling
+  installMobileFit(() => window.__game);   // phones: fullscreen + landscape lock, pause while held upright
   return game;
 }
 

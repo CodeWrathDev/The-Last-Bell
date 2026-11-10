@@ -1,0 +1,9 @@
+{
+  "name": "The Last Bell",
+  "short_name": "Last Bell",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#05070f",
+  "theme_color": "#05070f"
+}
