@@ -1,0 +1,105 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:#000">
+<canvas id="c" width="480" height="270" style="width:960px;height:540px;image-rendering:pixelated"></canvas>
+<script type="module">
+import { Renderer3D } from '/src/render3d/Renderer3D.js';
+import { Rig3D, RIG, bestHeading } from '/src/render3d/Rig3D.js';
+import { Tileset } from '/src/render3d/Pix.js';
+import { pixFromImage, textPix, signPix } from '/src/render3d/DomAssets.js';
+import { buildMap } from '/src/maps/index.js';
+import { moveBody } from '/src/systems/Collision.js';
+import { spawnHeading } from '/src/render3d/mapView.js';
+import { drawHide, drawHands, drawCross } from '/src/render3d/FpOverlay.js';
+
+const load = (u) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = u; });
+const A = '/public/assets/';
+const tilesImg = await load(A + 'tilesets/tiles.png');
+const tiles = new Tileset(pixFromImage(tilesImg, 0, 0, tilesImg.width, tilesImg.height));
+const atlases = {};
+for (const k of ['objects', 'furniture']) {
+  const p = { objects: 'sprites/objects/objects', furniture: 'sprites/furniture/furniture' }[k];
+  atlases[k] = { img: await load(A + p + '.png'), json: await (await fetch(A + p + '.json')).json() };
+}
+const frameCache = new Map();
+const sprite = (name) => {
+  if (frameCache.has(name)) return frameCache.get(name);
+  let out = null;
+  for (const a of Object.values(atlases)) {
+    const fr = Array.isArray(a.json.frames) ? a.json.frames.find((f) => f.filename === name) : a.json.frames[name];
+    if (fr) { const f = fr.frame; out = pixFromImage(a.img, f.x, f.y, f.w, f.h); break; }
+  }
+  frameCache.set(name, out); return out;
+};
+const sheets = {
+  player: { img: await load(A + 'sprites/player/player.png'), w: 32, h: 40, cols: 6 },
+  girl: { img: await load(A + 'sprites/ghosts/girl.png'), w: 32, h: 48, cols: 6 },
+  crawler: { img: await load(A + 'sprites/ghosts/crawler.png'), w: 160, h: 101, cols: 6 },
+};
+const sheetFrame = (k, i) => { const s = sheets[k]; return pixFromImage(s.img, (i % s.cols) * s.w, Math.floor(i / s.cols) * s.h, s.w, s.h); };
+const _tc = new Map();
+const assets = { tiles, sprite, text: (s, size, color, opts) => { const k = s + size + color + JSON.stringify(opts || {}); if (!_tc.has(k)) _tc.set(k, textPix(s, size, color, undefined, opts)); return _tc.get(k); }, sign: (spec) => { const k = 'sg' + JSON.stringify(spec); if (!_tc.has(k)) _tc.set(k, signPix(spec)); return _tc.get(k); } };
+
+const canvas = document.getElementById('c'), ctx = canvas.getContext('2d');
+const R = new Renderer3D(480, 270, RIG.FIRST_PERSON ? { plane: 0.9, horizon: 0.5, camZ: RIG.EYE } : undefined), rig = new Rig3D();
+const imageData = new ImageData(new Uint8ClampedArray(R.px.buffer), 480, 270);
+let map, grid, player, mapId;
+const TILE = 32;
+
+window.H = {
+  async enter(id, spawn = 'start', pos = null, heading = null) {
+    mapId = id; map = buildMap(id); grid = map.collisionGrid();
+    const sp = pos || map.spawns[spawn] || map.spawns.start;
+    player = { x: sp.x / TILE, y: sp.y / TILE, animT: 0, moving: false };
+    R.setMap(map, assets);
+    rig.snap(player.x, player.y, heading ?? spawnHeading(id, spawn), (x, y) => R.hAt(Math.floor(x), Math.floor(y)) >= RIG.CAM_BLOCK_H);
+    return { w: map.w, h: map.h };
+  },
+  lights(t = 0) {
+    const L = [];
+    for (const o of map.objects) {
+      if (o.type === 'light') L.push({ x: (o.x + (o.tube ? 16 : 0)) / TILE, y: o.y / TILE, r: (o.light / TILE) * 1.2, i: (o.intensity ?? 1) * (o.flicker ? 0.8 : 1), tint: hex(o.tint ?? 0xcfe0ff) });
+      if (o.type === 'lamp') L.push({ x: (o.x + 16) / TILE, y: (o.y - 20) / TILE, r: (o.light / TILE) * 1.2, i: 1, tint: hex(0xffd68a) });
+    }
+    L.push({ x: player.x, y: player.y, r: 2.3, i: 0.5, tint: [1, 0.95, 0.85] });
+    return L;
+  },
+  frame({ flash = false, ghost = null, t = 1.0, anim = 6, dt = 0.016, zoom = 1, hide = 0, crouch = 0, moving = false, pitch = 0 } = {}) {
+    const FP = RIG.FIRST_PERSON; rig.pitch = pitch;
+    const blocked = (x, y) => R.hAt(Math.floor(x), Math.floor(y)) >= RIG.CAM_BLOCK_H;
+    rig.update(dt, player.x, player.y, blocked);
+    const amb0 = (1 - (map.meta.ambient ?? 0.85)) * (map.meta.outdoor ? 1.05 : 0.8), amb = { r: amb0 * 0.95, g: amb0 * 0.95, b: amb0 * 1.25 };
+    const sprites = FP ? [] : [{ x: player.x, y: player.y, z: 0, pix: sheetFrame('player', anim), ox: 0.5, oy: 0.95, bright: 0.62, shadow: 0.42 }];
+    const lights = this.lights(t);
+    if (ghost) { sprites.push({ x: ghost.x, y: ghost.y, z: 0, pix: sheetFrame('girl', 0), ox: 0.5, oy: 46 / 48, alpha: 0.8, bright: 0.55, glow: true, shadow: 0.35 }); lights.push({ x: ghost.x, y: ghost.y, r: 2.8, i: 0.45, tint: [0.62, 0.5, 1] }); }
+    let mists = [];
+    if (ghost && ghost.crawler) {
+      if (!FP) sprites.pop(); else sprites.length = 0; lights.pop();
+      sprites.push({ x: ghost.x, y: ghost.y, z: 0, pix: sheetFrame('crawler', 4 * 6), ox: 0.5, oy: 0.62, scale: 0.85, alpha: 1, bright: 0.3, dark: 0.55, shadow: 1 });
+      lights.push({ x: ghost.x, y: ghost.y, r: 3.4, i: 0.3, tint: [0.34, 0.2, 0.6] });
+      mists.push({ x: ghost.x, y: ghost.y, r: 4.2 + (ghost.burst || 0), i: 0.75 + (ghost.burst || 0) * 0.3 });
+    }
+    const fixtures = map.objects.filter((o) => o.tube).map((o) => ({ x: o.x + 16, y: o.y, on: true }));
+    const t0 = performance.now();
+    const camZ = FP ? RIG.EYE - RIG.EYE_CROUCH * crouch - (RIG.EYE - RIG.HIDE_EYE) * hide : undefined;
+    R.render({ x: rig.x, y: rig.y, yaw: rig.yaw, zoom, camZ, bob: Math.round(pitch) }, { time: t, lights, sprites, amb, fixtures, mists, flash: { on: flash, boom: rig.boom } });
+    if (FP) { const pl = { hidden: hide > 0.5, flashOn: flash, moving, running: false, animT: anim, act: null, actT: 0 }; drawHide(R, hide); drawHands(R, pl, t * 1000, crouch, 0); drawCross(R, pl, false); }
+    ctx.putImageData(imageData, 0, 0);
+    return performance.now() - t0;
+  },
+  /** Applies the same camera-relative movement + real grid collision the game uses. */
+  walk({ fwd = 0, strafe = 0, turn = 0, dt = 0.016, run = false }) {
+    if (turn) rig.turn(dt, turn);
+    const v = Rig3D.move(rig.heading, fwd, strafe), len = Math.hypot(v.vx, v.vy);
+    if (len > 0) {
+      const sp = (run ? 165 : 95) * (fwd < -0.1 ? RIG.BACK_SPEED : 1);
+      const b = { x: player.x * TILE, y: player.y * TILE - 4, hw: 6, hh: 4 };
+      moveBody(grid, b, (v.vx / len) * sp * dt, (v.vy / len) * sp * dt);
+      player.x = b.x / TILE; player.y = (b.y + 4) / TILE;
+    }
+  },
+  state: () => ({ x: player.x, y: player.y, heading: rig.heading, boom: rig.boom, cam: [rig.x, rig.y] }),
+  setPlayer(x, y, heading) { player.x = x; player.y = y; if (heading != null) rig.snap(x, y, heading, (a, b) => R.hAt(Math.floor(a), Math.floor(b)) >= RIG.CAM_BLOCK_H); },
+  playerPx: () => R.project(player.x, player.y, 0.6),
+};
+const hex = (c) => [((c >> 16) & 255) / 255, ((c >> 8) & 255) / 255, (c & 255) / 255];
+window.READY = true;
+</script>

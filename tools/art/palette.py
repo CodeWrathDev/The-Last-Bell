@@ -1,0 +1,24 @@
+"""Shared night palette: midnight blue base, muted green / purple, warm lamp yellow, sparing red."""
+CONC   = ['#1a2033', '#242c45', '#313a58', '#414b6c', '#56628a', '#6c7aa3']
+CONCW  = ['#141a2b', '#1c2438', '#27314b', '#34415f', '#475779']          # wet concrete
+GRASS  = ['#0a1a16', '#0f2a20', '#173b2a', '#215037', '#2f6a47', '#418258']
+SOIL   = ['#1a120e', '#2a1c14', '#3d2a1c', '#563b26']
+WOOD   = ['#1b110d', '#2b1b13', '#40271a', '#5a3722', '#7a4c2c', '#9b6a3e']
+PLAST  = ['#26332f', '#33463f', '#455a52', '#5b7268', '#738c80', '#8da498']   # peeling green-cream wall
+PLASTI = ['#1f3036', '#2c4147', '#3c555a', '#506c70', '#678486']              # interior wall: same paint family, cooler
+BRICK  = ['#3a1a1c', '#522426', '#6d3030', '#8a4238']
+TIN    = ['#2a2d3d', '#3a3f55', '#4f566f', '#69718d', '#8890ab']
+RUST   = ['#3a1f1c', '#58301f', '#7a4423', '#9a5a2c']
+ROOFRED= ['#2e1219', '#44192a', '#5b2230', '#7a3040', '#964050']
+IRON   = ['#0d0f18', '#171a28', '#242839', '#363c52', '#4f5772']
+GLASS  = ['#0a1224', '#12203a', '#1c3354', '#2b4a74', '#4a6fa0']
+LAMP   = ['#7a4a14', '#b87a22', '#e8a93a', '#ffd070', '#fff0b0']
+LEAF   = ['#06150f', '#0b2418', '#11341f', '#1a4a2b', '#266339', '#378049']
+PAPER  = ['#5c5440', '#8a8062', '#b8ac84', '#d9ceA6'.lower(), '#efe6c4']
+RED    = ['#3a0f14', '#6a1a22', '#a02a34', '#d04650']
+PURPLE = ['#1d1630', '#2e2250', '#463670', '#65509a']
+SKIN   = ['#6b3a26', '#8f5636', '#b87a4c', '#d89e6a', '#efc08c']
+HAIR   = ['#07060b', '#120f1a', '#1e1a2a', '#2e2a40']
+UNI    = ['#8a93ac', '#b4bcd2', '#d8deee', '#f2f5fc']                         # white uniform
+GREEN_L= ['#0e2a1e', '#16402d', '#1f5a3e', '#2c7a55']                         # school longyi green
+OUT    = '#07080f'

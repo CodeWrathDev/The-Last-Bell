@@ -1,0 +1,8 @@
+0: LIBFLOOR (master tile id 41)
+1: LIBSHELF (master tile id 42)
+2: READTABLE (master tile id 43)
+3: WALLINT (master tile id 25)
+4: WALLINTBASE (master tile id 45)
+5: WINDOWRAIN (master tile id 44)
+6: RUG (master tile id 27)
+7: DOOR (master tile id 7)

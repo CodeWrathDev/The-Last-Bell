@@ -1,0 +1,20 @@
+THE HAUNTED SCHOOL - STATUS AFTER THE FULL VISUAL OVERHAUL
+===========================================================
+Checked in headless Chromium + npm run check (10 logic tests + map verification for 4 maps): all green, no console errors.
+
+DONE
+ - Pixel-art pipeline (tools/art, npm run art) and every PNG asset: tiles, player (26 anim rows), 3 ghosts, props, effects, UI, title layers
+ - Maps: campus, hallway, Classroom A, and the NEW Library (tables to hide under, 3 lore notes, spare battery, patrolling ghost, windows, fans, curtains)
+ - Library door in the hall works end to end (key -> unlock -> enter -> back to hall); reading the 3 library notes sets the objective "libdone"
+ - Ghosts: Classroom Girl, Crawling Student (Classroom A), Shadow Teacher apparition (hall)
+ - Lighting, fog, dust, leaves, roof drips, puddle ripples, grass/banyan sway, flag, fans, curtains, flickering tubes in hall/classroom/library, emergency lights, animated rain on window glass
+ - Camera lag/zoom punches/room-entry zoom/barrel distortion; pixel UI incl. game-over portrait; item-fly-to-bag
+ - FPS watchdog that lowers visual extras on slow devices; OUTDOOR_ZOOM switch in src/config.js
+
+STILL OPEN (honest list)
+ 1. Real-hardware performance (Intel Iris Xe, phones) is UNMEASURED: headless software GL ran at ~6 FPS, which says nothing about a real GPU. Playtest, and if needed lower rain counts (UIScene/MenuScene RainField) or use quality levels in GameScene.watchFps.
+ 2. Outdoor zoom stays 1 (indoors 2) by default so the courtyard stays navigable and ghosts cannot see you from off-screen. Pixel size therefore differs outdoors; set OUTDOOR_ZOOM = 2 for uniform pixels (tested visually, looks good) and re-tune ghost sight if you do.
+ 3. Crawler (Classroom A) and Shadow Teacher timing are untuned; playtest difficulty.
+ 4. Burmese text relies on the Noto Sans Myanmar web font (offline machines fall back to a system font).
+ 5. Story content ends at the Library ("rest of the school is still being built"); chapters 4-5, other rooms (Classroom B, Computer Room, Science Lab, Principal's Office) are still locked doors.
+ 6. No new audio was made; the teacher apparition reuses the existing "whisper" sound.

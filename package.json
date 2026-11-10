@@ -1,0 +1,32 @@
+{
+  "name": "kyaungnya-haunted-school",
+  "version": "0.1.0",
+  "description": "\u1000\u103b\u1031\u102c\u1004\u103a\u1038\u100a - THE HAUNTED SCHOOL. A 2D pixel-art horror adventure set in a Myanmar school at night.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "verify:maps": "node tools/verify-maps.mjs",
+    "test:logic": "node tools/test-logic.mjs",
+    "test:bell": "node tools/test-last-bell.mjs",
+    "test:crawler": "node tools/test-crawler-dir.mjs",
+    "test:mic": "node tools/test-mic.mjs",
+    "test:quiet": "node --import ./tools/stubs/register.mjs tools/test-quiet.mjs",
+    "check": "npm run test:imports && npm run verify:maps && npm run test:logic && npm run test:bell && npm run test:crawler && npm run test:mic && npm run test:quiet && node tools/test-i18n.mjs && npm run smoke",
+    "art": "python3 tools/art/gen_all.py",
+    "export:maps": "node tools/export-maps.mjs",
+    "test:view3d": "python3 tools/view3d/shots.py && python3 tools/view3d/walk.py",
+    "test:imports": "node tools/check-imports.mjs",
+    "smoke": "node --import ./tools/stubs/register.mjs tools/smoke-game.mjs && node --import ./tools/stubs/register.mjs tools/smoke-ui.mjs"
+  },
+  "dependencies": {
+    "howler": "^2.2.4",
+    "phaser": "^3.80.1",
+    "@fontsource/noto-sans-myanmar": "^5.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}
