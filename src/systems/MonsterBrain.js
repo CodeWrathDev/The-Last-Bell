@@ -24,12 +24,12 @@ import { perceived } from './SoundBus.js';
 export const MS = {
   PATROL: 'patrol', CHASE: 'chase', LISTEN: 'listen', SEARCH: 'search', RETURN_TO_PATROL: 'return_to_patrol',
 };
-export const SPEED = { patrol: 54, chase: 146, ret: 68, hunt: 164, creep: 76, lunge: 162, search: 66 };
+export const SPEED = { patrol: 54, chase: 170, ret: 68, hunt: 164, creep: 76, lunge: 192, search: 66 };   // v44: chase/lunge are faster than a sprint (165): you must hide or go silent
 // FINAL CHAPTER: once the girl has turned, the creature is no longer blind. It SEES you and never stops (hunt 128 > walk 95, < run 165,
 // so sprinting buys you a few seconds, but stamina runs out and there is nowhere to go).
 export const HEARING = 1.55;
-export const SOUND_MEMORY = 1.6;
-export const LISTEN_TIME = 4.2;
+export const SOUND_MEMORY = 2.4;
+export const LISTEN_TIME = 2.2;
 export const SEARCH_TIME = 11;   // seconds it searches around the last noise before it gives up and goes back to patrol
 export const LOUD = 0.2;         // softer sounds now make it charge instead of merely creeping
 export const LUNGE_DIST = 5 * TILE;  // seconds it stands frozen and listening after the noise stops
@@ -49,6 +49,7 @@ export class MonsterBrain {
     this.stunT = 0; this.hunting = false; this.charging = 0;
     this.cautious = false;                          // true while it is only CREEPing toward a quiet noise
     this.aggro = 0;                                 // 0..1: gets sharper with every chase, calms down with time
+    this.noSearch = false;                           // v44: an ambush monster never crawls around searching: after the noise it just fades away
     this.searchT = 0; this.searchPts = []; this.searchWait = 0; this.sniffT = 3; this.lunged = false; this.lungeT = 0;
   }
   /** After a phantom scare: for `seconds` it knows exactly where the player is and runs straight at them (hiding still saves you). */
@@ -168,7 +169,7 @@ export class MonsterBrain {
         this.timer -= dt;
         // it "feels" you: the head turns slowly toward you (but it does NOT know where you are, it never moves toward you from here)
         { const want = Math.atan2(w.py - b.y, w.px - b.x); let df = ((want - this.facing + Math.PI * 3) % (Math.PI * 2)) - Math.PI; this.facing += Math.max(-0.5 * dt, Math.min(0.5 * dt, df)); }
-        if (this.timer <= 0) { this.beginSearch(); }
+        if (this.timer <= 0) { if (this.noSearch) { this.enter(MS.PATROL, 0); this.events.push('search_end'); } else this.beginSearch(); }
         break;
       case MS.SEARCH: {
         // It does not leave. It crawls to 3-4 spots around where it last heard you, stopping to sniff at each one.

@@ -67,8 +67,9 @@ export class GameScene extends Phaser.Scene {
     this.quietT = 99;   // seconds since the player last made a noise
     this.bus.subscribe((e) => {
       if (Math.hypot(e.x - this.player.body.x, e.y - this.player.body.y) < 40) { this.quietT = 0; this.noiseKick = Math.max(this.noiseKick ?? 0, e.loudness ?? 0); }   // the player's OWN noise (a thrown chalk does not count)
-      if (this.ghost) this.ghost.brain.hear(e); else this.noiseAccum(e);
-      this.maybeEmerge(e);
+      const gh = this.ghost;
+      if (gh && gh.leaving && !gh.glimpse && !gh.phantom && !gh.hold && gh.brain.state === 'patrol') { this.removeGhost(); this.noiseAccum(e); }   // it was fading away: a new noise brings it back, near you
+      else if (gh) gh.brain.hear(e); else this.noiseAccum(e);
       const l = this.companion?.brain.react(e); if (l) this.U((u) => u.bubble(l));
     });
 
@@ -939,7 +940,7 @@ export class GameScene extends Phaser.Scene {
   noiseAccum(e) {
     const p = this.player;
     if (!this.story.monsterActive || !this.meta.ghostPatrol || this.finalPhase || this.cutsceneActive || this.ghostT > 0 || this.dreadT > 0 || this.phantomT > 0 || p.hidden) return;
-    const w = { walk: 0.2, run: 0.7, door: 0.7, door_slam: 1.5, drop: 1.5, break: 2, voice: 0.8, throw: 1.2, pickup: 0.15 }[e.type];
+    const w = { walk: 0.2, run: 0.7, door: 1.2, door_slam: 1.5, drop: 1.5, break: 2, voice: 1.2, throw: 1.2, pickup: 0.15 }[e.type];
     if (!w) return;
     this.hearAcc = (this.hearAcc ?? 0) + w;
     if (this.hearAcc >= 1.2) { this.hearAcc = 0; this.summonGhost(e); }
@@ -977,23 +978,44 @@ export class GameScene extends Phaser.Scene {
     this.track(this.ghost);
   }
 
+  /** v44: a loud noise makes the creature APPEAR SUDDENLY a few tiles from you (it was never crawling around) and charge at the noise, fast. */
   summonGhost(e) {
-    // A patrol creature already exists in the school: feed it the new sound instead of creating a second brain.
+    const p = this.player;
+    // already one in the school (e.g. final chapter patrol): just feed it the sound
     if (this.ghost?.persistentPatrol && !this.ghost.phantom && !this.ghost.hold) {
       this.ghost.brain.hear({ ...e, loudness: Math.max(e.loudness ?? 0.6, 0.8), radius: 60 * TILE });
       this.ghost.pop();
       return;
     }
-    if (!e.forceChase && Math.random() < 0.65 && this.glimpse()) return;   // most of the time it is only a glimpse (see below)
-    const p = this.player, pts = this.meta.ghostPatrol.map(([tx, ty]) => ({ x: tx * TILE + 16, y: ty * TILE + 16 }));
-    let best = null, bd = 1e9;
-    for (const q of pts) { const d = Math.hypot(q.x - p.body.x, q.y - p.body.y); if (d > 6 * TILE && Math.abs(d - 11 * TILE) < bd) { bd = Math.abs(d - 11 * TILE); best = q; } }
-    if (!best) { let fd = -1; for (const q of pts) { const d = Math.hypot(q.x - p.body.x, q.y - p.body.y); if (d > fd) { fd = d; best = q; } } }
-    this.ghost = new Ghost(this, { x: best.x, y: best.y, patrol: [], grid: this.grid });
-    this.ghost.brain.setHideSpots(this.hideSpots); this.track(this.ghost);
-    this.ghost.brain.hear({ ...e, loudness: Math.max(e.loudness ?? 0.6, 0.8), radius: 60 * TILE });
-    this.audioMgr.at('mon_growl', { x: best.x, y: best.y }, { channel: 'sfx', maxDist: 40 * TILE });
-    this.time.delayedCall(1200, () => { if (this.ghost) this.audioMgr.at('mon_jaws', { x: this.ghost.brain.x, y: this.ghost.brain.y }, { maxDist: 16 * TILE }); });
+    const at = this.ambushSpot();
+    this.ghost = new Ghost(this, { x: at.x, y: at.y, patrol: [], grid: this.grid });
+    const g = this.ghost, br = g.brain;
+    br.noSearch = true; br.setHideSpots(this.hideSpots); this.track(g);
+    br.facing = Math.atan2(e.y - at.y, e.x - at.x);
+    g.pop();                                                       // there, instantly, no fade-in
+    br.hear({ ...e, loudness: Math.max(e.loudness ?? 0.6, 0.9), radius: 60 * TILE });
+    br.events.length = 0; br.lunged = false;
+    this.quietT = 0; this.calmT = 0;
+    this.audioMgr.silence(0.5);
+    audio.play('scare', 0.85, 0.8); this.monsterVoice('mon_roar', 1);
+    this.cameras.main.shake(300, 0.010); this.zoomPunch(1.07, 200); this.distort(320, 0.14);
+  }
+
+  /** A free tile 4-7 tiles from the player that the creature can walk to the player from. Prefers a spot you can SEE (it pops into view). */
+  ambushSpot() {
+    const p = this.player, aim = p.aim ?? 0, tx0 = Math.floor(p.body.x / TILE), ty0 = Math.floor(p.body.y / TILE), R = 8;
+    const seen = [], hidden = [];
+    for (let ty = ty0 - R; ty <= ty0 + R; ty++) for (let tx = tx0 - R; tx <= tx0 + R; tx++) {
+      if (this.grid[ty]?.[tx] !== false) continue;
+      const x = tx * TILE + 16, y = ty * TILE + 16, d = Math.hypot(x - p.body.x, y - p.body.y);
+      if (d < 4 * TILE || d > 7 * TILE) continue;
+      let da = Math.abs(Math.atan2(y - p.body.y, x - p.body.x) - aim); da = Math.min(da, Math.PI * 2 - da);
+      (hasLOS(this.grid, x, y, p.body.x, p.body.y) ? seen : hidden).push({ x, y, da });
+    }
+    const front = seen.filter((c) => c.da < 1.3);
+    const pool = front.length ? front : seen.length ? seen : hidden;
+    if (pool.length) return pool[Math.floor(Math.random() * pool.length)];
+    const b = this.behind(3); return { x: b.x, y: b.y };
   }
 
   /** Free floor tiles between lo and hi pixels from the player, in line of sight, with their angle off the view direction. */
@@ -1088,8 +1110,7 @@ export class GameScene extends Phaser.Scene {
         this.followDoor = false;
         this.summonGhost({ id: -1, x: p.x, y: p.y, loudness: 0.9, type: 'door', forceChase: true });
       } else if (!this.followDoor && this.ghostT <= 0 && this.meta.ghostPatrol) {
-        this.patrolSpawned = true;
-        this.spawnPatrollingGhost();
+        this.ghostT = 0;   // v44: NO patrol. It is not in the school at all until it hears a noise.
       }
       this.updateThreat();
       return;
