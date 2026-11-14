@@ -191,6 +191,11 @@ export class View3D {
       const amp = p.running ? 3.2 : p.crouching ? 1.2 : 2.2, fq = p.running ? 1.34 : p.crouching ? 0.85 : 1.31;
       bob = p.moving && !p.hidden ? Math.round(Math.abs(Math.sin(p.animT * fq)) * amp - amp / 2) : Math.round(Math.sin(time * 0.0013));
       bob += Math.round(rig.pitch);
+      // A close hunt makes the player's view breathe and tremble very slightly.
+      // Keep it sub-pixel at low threat; the camera should feel unreliable only
+      // when the monster has earned that reaction.
+      const fear = Math.max(0, Math.min(1, gs.dread ?? 0));
+      bob += Math.round(Math.sin(time * 0.010) * fear * 1.6 + Math.sin(time * 0.023) * fear * 0.8);
     } else {
       camZ = r.camZ - 0.4 * (this.ck ?? 0);
       bob = p.moving ? Math.round(Math.sin(p.animT * (p.running ? 1.05 : 0.9)) * 1.2) : 0;

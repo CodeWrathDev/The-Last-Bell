@@ -54,13 +54,19 @@ export function buildCampus() {
   m.set('deco', 17, 5, T.PILLAR); m.set('deco', 22, 5, T.PILLAR);
   m.set('deco', 19, 5, T.DOOR); m.set('deco', 20, 5, T.DOOR);
   m.rect('ground', 18, 6, 4, 1, T.STAIRS);
-  m.addObject({ type: 'door', x: px(19), y: px(5), w: px(2), h: px(1), target: 'hall', spawn: 'fromCampus', label: 'Enter school building', plate: 'MAIN ENTRANCE' });
-  // Signboards: `en` / `my` are what the 3D view paints (English first, Burmese under it). `text`/`bw`/`bh` feed the 2D layer.
-  m.addObject({ type: 'sign', x: px(20), y: px(3) + 16, text: 'BASIC EDUCATION HIGH SCHOOL', board: true, bw: 150, bh: 26, size: 17,
-    en: 'BASIC EDUCATION HIGH SCHOOL', my: 'အခြေခံပညာ အထက်တန်းကျောင်း', hang: true, tx: 20, ty: 6.14, z: 4.05, sw: 272, sh: 74, enSize: 16, mySize: 19 });
+  // Covered entrance veranda: a familiar Myanmar school frontage with a shallow
+  // concrete apron, square posts, and rainwater channels under the eaves.
+  m.rect('ground', 14, 6, 12, 2, T.COURT);
+  m.scatter('ground', 14, 6, 12, 2, [T.PATHWET, T.PATHMOSS], 117, 0.22);
+  m.rect('ground', 18, 6, 4, 1, T.STAIRS);
+  for (const [cx, cy] of [[14, 6], [25, 6], [14, 7], [25, 7]]) m.set('deco', cx, cy, T.PILLAR);
+  for (const x of [15, 16, 17, 22, 23, 24]) m.set('ground', x, 7, T.DRAIN);
+  m.addObject({ type: 'door', x: px(19), y: px(5), w: px(2), h: px(1), target: 'hall', spawn: 'fromCampus', label: 'Enter school building' });
   m.addObject({ type: 'sign', x: px(4), y: px(11) + 16, text: 'WEST WING', board: true, bw: 60, bh: 16, size: 11, en: 'WEST WING', tx: 3, ty: 11.5, z: 0.28, sw: 72, sh: 24, enSize: 11 });
   m.addObject({ type: 'sign', x: px(36), y: px(11) + 16, text: 'EAST WING', board: true, bw: 60, bh: 16, size: 11, en: 'EAST WING', tx: 36, ty: 11.5, z: 0.28, sw: 72, sh: 24, enSize: 11 });
   m.addObject({ type: 'sign', x: px(5), y: px(20) + 16, text: 'GUARD HOUSE', board: true, bw: 80, bh: 16, size: 11, en: 'GUARD HOUSE', tx: 4.5, ty: 20.5, z: 0.28, sw: 88, sh: 24, enSize: 11 });
+  m.addObject({ type: 'sign', x: px(2), y: px(22) + 10, text: 'ကျောင်းဝင်း', board: true, bw: 92, bh: 18, size: 12,
+    en: 'SCHOOL COMPOUND', my: 'ကျောင်းဝင်း', tx: 4.1, ty: 22.35, z: 0.2, sw: 126, sh: 38, enSize: 10, mySize: 14 });
   // Porch lanterns (red) either side of the entrance, with a dim red glow
   for (const lx of [18.45, 21.55]) {
     m.addObject({ type: 'decor', sprite: 'lantern', x: px(lx) - 16, y: px(6) + 8, w: 32, h: 0, z: 0.72, glowSprite: true });
@@ -118,6 +124,11 @@ export function buildCampus() {
   const decor = (sprite, tx, ty, wTiles, hTiles, blocks = true, extra = {}) => m.addObject({ type: 'decor', sprite, x: px(tx), y: px(ty), w: px(wTiles), h: px(hTiles), blocks, ...extra });
   decor('bench', 14, 18, 2, 1); decor('bench', 23, 19, 2, 1);
   decor('pot_flower', 17, 6, 1, 1); decor('pot_flower', 22, 6, 1, 1);
+  // Shoes and school bags left under the veranda make the entrance feel used,
+  // even after the last bell. Existing atlas props keep this dressing cheap.
+  decor('bench', 15, 8, 2, 1); decor('bag', 17, 7, 1, 1, false, { rot: -0.12 });
+  decor('bag', 23, 7, 1, 1, false, { rot: 0.15 });
+  decor('books', 20, 7, 1, 1, false); decor('bin', 24, 8, 1, 1);
   decor('pot_fern', 7, 11, 1, 1); decor('bin', 7, 20, 1, 1); decor('bin', 31, 12, 1, 1);
   decor('papers', 12, 10, 1, 1, false); decor('papers', 26, 20, 1, 1, false); decor('books', 30, 19, 1, 1, false);
   decor('bag', 8, 18, 1, 1, false, { rot: -0.2 });
@@ -126,6 +137,13 @@ export function buildCampus() {
   m.addObject({ type: 'pickup', id: 'battery', x: px(5), y: px(21), w: 32, h: 32, sprite: 'item_battery', text: 'A spare flashlight battery, left beside the guard house.' });
   m.addObject({ type: 'note', x: px(24), y: px(7), w: 32, h: 32, sprite: 'item_note', text: 'Notice board: "ညဘက် ကျောင်းအတွင်း မနေရ။ — School closed after 8 PM. By order of the Principal."' });
   m.addObject({ type: 'action', id: 'find_ground_clue', chapter: 'ch1', x: px(14), y: px(19), w: 32, h: 32, sprite: 'item_note', text: 'A soaked class photo under the bench. One face has been scratched out, and a wet footprint points toward the main building.', done: 'The footprint is already in your notebook.' });
+
+  // Open drains and rain collection points are common around older school
+  // compounds; they also break up the large flat courtyard silhouette.
+  for (const [dx, dy] of [[3, 6], [12, 6], [27, 6], [34, 6], [3, 22], [27, 22], [35, 22]]) m.set('ground', dx, dy, T.DRAIN);
+  for (const [lx, ly] of [[11, 6], [28, 6], [11, 22], [28, 22]]) {
+    m.addObject({ type: 'light', x: px(lx), y: px(ly) + 10, light: 105, tint: 0x9bb7db, intensity: 0.34 });
+  }
 
 
   // East edge of the school grounds (x=63): bushes with a gap, leading to the monastery compound

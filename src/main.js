@@ -21,7 +21,7 @@ function startGame() {
     backgroundColor: '#05070f',
     pixelArt: true,
     roundPixels: true,
-    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+    scale: { mode: Phaser.Scale.ENVELOP, autoCenter: Phaser.Scale.CENTER_BOTH },
     physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
     input: { activePointers: 6 },   // stick + buttons + look-drag at the same time
     scene: [BootScene, MenuScene, GameScene, UIScene, CutsceneScene],

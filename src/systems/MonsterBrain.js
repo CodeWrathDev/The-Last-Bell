@@ -24,7 +24,7 @@ import { perceived } from './SoundBus.js';
 export const MS = {
   PATROL: 'patrol', CHASE: 'chase', LISTEN: 'listen', SEARCH: 'search', RETURN_TO_PATROL: 'return_to_patrol',
 };
-export const SPEED = { patrol: 54, chase: 170, ret: 68, hunt: 164, creep: 76, lunge: 192, search: 66 };   // v44: chase/lunge are faster than a sprint (165): you must hide or go silent
+export const SPEED = { patrol: 54, chase: 150, ret: 68, hunt: 164, creep: 76, lunge: 162, search: 66 };   // pursuit stays just under a full sprint: hiding and silence remain viable escapes
 // FINAL CHAPTER: once the girl has turned, the creature is no longer blind. It SEES you and never stops (hunt 128 > walk 95, < run 165,
 // so sprinting buys you a few seconds, but stamina runs out and there is nowhere to go).
 export const HEARING = 1.55;
@@ -50,7 +50,7 @@ export class MonsterBrain {
     this.cautious = false;                          // true while it is only CREEPing toward a quiet noise
     this.aggro = 0;                                 // 0..1: gets sharper with every chase, calms down with time
     this.noSearch = false;                           // v44: an ambush monster never crawls around searching: after the noise it just fades away
-    this.searchT = 0; this.searchPts = []; this.searchWait = 0; this.sniffT = 3; this.lunged = false; this.lungeT = 0;
+    this.hideSpots = []; this.searchT = 0; this.searchPts = []; this.searchWait = 0; this.sniffT = 3; this.lunged = false; this.lungeT = 0;
   }
   /** After a phantom scare: for `seconds` it knows exactly where the player is and runs straight at them (hiding still saves you). */
   charge(seconds = 3) { this.stunT = 0; this.charging = seconds; this.path = null; this.hearT = 0.5; this.enter(MS.CHASE); this.events.push('rush'); }
@@ -60,7 +60,10 @@ export class MonsterBrain {
   retreat(seconds = 5) { this.stunT = seconds; this.last = null; this.hearT = 0; this.path = null; this.enter(MS.RETURN_TO_PATROL); }
   get x() { return this.body.x; }
   get y() { return this.body.y; }
-  setHideSpots() { /* kept for API compatibility: a blind creature does not check hiding places, hiding just keeps you silent */ }
+  /** Keep hiding places in the search plan. The creature is still blind and
+   * never gets a free hit, but it now crawls to likely cover instead of
+   * scattering its search points randomly every time. */
+  setHideSpots(spots = []) { this.hideSpots = Array.isArray(spots) ? spots : []; }
   enter(state, timer = 0) { this.state = state; this.timer = timer; this.path = null; this.pathGoal = null; }
 
   /** Offer a sound event. Returns true if the creature heard it.
@@ -201,10 +204,19 @@ export class MonsterBrain {
   beginSearch() {
     const c = this.searchCenter || { x: this.x, y: this.y };
     this.searchPts = []; this.closeFlag = false;
+    // Check nearby desks/benches first. A player who ran into cover hears the
+    // monster stop beside the exact kind of hiding place they chose.
+    const hide = this.hideSpots
+      .filter((s) => Math.hypot(s.x - c.x, s.y - c.y) < 7 * TILE)
+      .sort((a, b) => Math.hypot(a.x - c.x, a.y - c.y) - Math.hypot(b.x - c.x, b.y - c.y));
+    for (const s of hide.slice(0, 3)) {
+      const g = nearestFree(this.grid, s.tx, s.ty);
+      if (g) this.searchPts.push({ x: g.tx * TILE + 16, y: g.ty * TILE + 16, hide: true, tx: s.tx, ty: s.ty });
+    }
     for (let i = 0; i < 12 && this.searchPts.length < 4; i++) {
       const a = this.rng() * Math.PI * 2, r = (1.5 + this.rng() * 3.5) * TILE;
       const g = nearestFree(this.grid, tileOf(c.x + Math.cos(a) * r), tileOf(c.y + Math.sin(a) * r));
-      if (g) this.searchPts.push({ x: g.tx * TILE + 16, y: g.ty * TILE + 16 });
+      if (g && !this.searchPts.some((p) => p.tx === g.tx && p.ty === g.ty)) this.searchPts.push({ x: g.tx * TILE + 16, y: g.ty * TILE + 16, tx: g.tx, ty: g.ty });
     }
     this.searchT = SEARCH_TIME + this.aggro * 5; this.searchWait = 0.8; this.sniffT = 0.4;
     this.enter(MS.SEARCH); this.events.push('search');

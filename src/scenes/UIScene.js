@@ -58,6 +58,10 @@ export class UIScene extends Phaser.Scene {
     this.vignette = this.add.image(0, 0, 'vignette_dark').setOrigin(0).setScale(2).setDepth(3).setAlpha(0);
     this.redRect = this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0xaa0000, 0).setOrigin(0).setDepth(4);
     this.whiteRect = this.add.rectangle(0, 0, VIEW_W, VIEW_H, 0xffffff, 0).setOrigin(0).setDepth(4);
+    // Sparse analogue interference sells the feeling that the flashlight and
+    // your senses are failing together. It stays dormant until the threat is
+    // close, so the effect remains a warning rather than constant decoration.
+    this.fearNoise = this.add.graphics().setDepth(5);
     // A rare, fast-moving silhouette crosses the whole view during ambient scares.
     this.shadowSweepRect = this.add.rectangle(-180, VIEW_H / 2, 220, VIEW_H * 1.55, 0x07030f, 0).setOrigin(0.5).setAngle(-10).setDepth(5);
 
@@ -632,6 +636,20 @@ export class UIScene extends Phaser.Scene {
     const dv = gs.dread ?? 0, hbMs = 1000 / (1 + 0.9 * dv), hbPulse = Math.exp(-((time % hbMs) / hbMs) * 6);
     this.vignette.setAlpha(Math.max(0, tv, dv > 0.05 ? dv * (0.5 + 0.4 * hbPulse) : 0));
     if (dv > 0.05 && this.tweens.getTweensOf(this.redRect).length === 0) this.redRect.setAlpha(dv * 0.2 * hbPulse);
+
+    const ng = this.fearNoise;
+    ng.clear();
+    const signal = Math.max(0, Math.min(1, Math.max(dv * 0.85, (tv - 0.55) * 1.8)));
+    if (signal > 0.05) {
+      const bands = 4 + Math.floor(signal * 10);
+      for (let i = 0; i < bands; i++) {
+        const y = ((time * (0.05 + i * 0.013) + i * 47) % (VIEW_H + 18)) - 9;
+        const w = 16 + ((Math.sin(time * 0.017 + i * 9) + 1) * 0.5) * 170;
+        const x = (Math.sin(time * 0.009 + i * 4.2) * 0.5 + 0.5) * (VIEW_W - w);
+        ng.fillStyle(i & 1 ? 0x8fa0cf : 0xff5f72, signal * (0.035 + (i % 3) * 0.012));
+        ng.fillRect(Math.round(x), Math.round(y), Math.round(w), i % 3 === 0 ? 2 : 1);
+      }
+    }
 
     this.drawMicMeter(gs.mic);
 

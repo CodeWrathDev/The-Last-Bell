@@ -912,7 +912,7 @@ export class GameScene extends Phaser.Scene {
     if (!ok) { this.nervousT = 5; return; }
     this.nervousT = 9 + Math.random() * 11;
     const at = this.audioMgr, far = (min, max) => { const a = Math.random() * Math.PI * 2, r = (min + Math.random() * (max - min)) * TILE; return { x: p.x + Math.cos(a) * r, y: p.y + Math.sin(a) * r }; };
-    const kind = ['steps_behind', 'breath', 'knock', 'growl_far', 'dip', 'whisper'][(Math.random() * 6) | 0];
+    const kind = ['steps_behind', 'breath', 'knock', 'growl_far', 'dip', 'whisper', 'steps_circle', 'child_run', 'door_chain', 'flash_blink'][(Math.random() * 10) | 0];
     if (kind === 'steps_behind') {                       // footsteps close in behind you... and stop
       for (let i = 0; i < 5; i++) this.time.delayedCall(i * 420, () => { if (!this.dead) at.at('step', this.behind(4 - i * 0.7), { maxDist: 8 * TILE }); });
       this.time.delayedCall(2300, () => { if (!this.dead) { at.at('breath_close', this.behind(1.0), { maxDist: 6 * TILE }); this.distort(500, 0.05); } });
@@ -927,6 +927,33 @@ export class GameScene extends Phaser.Scene {
     } else if (kind === 'dip') {                         // the lights dip and the music dies for a moment
       this.blackout = Math.max(this.blackout, 0.3); at.silence(2.2); audio.play('fan_stop', 0.25, 0.8);
       this.time.delayedCall(260 + Math.random() * 300, () => { if (!this.dead) this.blackout = 0; });
+    } else if (kind === 'steps_circle') {
+      // Footsteps orbit the player instead of simply approaching from behind.
+      // The changing pan makes the room feel larger and harder to read.
+      for (let i = 0; i < 7; i++) this.time.delayedCall(i * 330, () => {
+        if (this.dead) return;
+        const a = (p.aim ?? 0) + Math.PI * 2 * (i / 7) + 0.35;
+        at.at('step', { x: p.x + Math.cos(a) * 3.2 * TILE, y: p.y + Math.sin(a) * 3.2 * TILE }, { maxDist: 8 * TILE });
+      });
+      this.distort(700, 0.045);
+    } else if (kind === 'child_run') {
+      // A child runs across a nearby corridor, then calls once from the wrong side.
+      const a = Math.random() * Math.PI * 2, q = { x: p.x + Math.cos(a) * 6 * TILE, y: p.y + Math.sin(a) * 6 * TILE };
+      for (let i = 0; i < 4; i++) this.time.delayedCall(i * 170, () => { if (!this.dead) at.at('step', { x: q.x + i * 8, y: q.y }, { maxDist: 12 * TILE }); });
+      this.time.delayedCall(1100, () => { if (!this.dead) at.at('girl_call', q, { channel: 'voice', maxDist: 14 * TILE }); });
+    } else if (kind === 'door_chain') {
+      const q = far(5, 9);
+      at.at('door', q, { maxDist: 14 * TILE });
+      this.time.delayedCall(900, () => { if (!this.dead) at.at('door_slam', q, { maxDist: 14 * TILE }); });
+      this.time.delayedCall(1450, () => { if (!this.dead) at.at('mon_knock', q, { channel: 'sfx', maxDist: 12 * TILE }); });
+    } else if (kind === 'flash_blink') {
+      // A short electrical failure is harmless, but it breaks the player's
+      // confidence in the flashlight right before the next quiet moment.
+      this.blackout = Math.max(this.blackout, 0.18);
+      this.U((u) => u.whiteRect?.setAlpha(0.12));
+      this.time.delayedCall(120, () => { if (!this.dead) this.U((u) => u.whiteRect?.setAlpha(0)); });
+      this.time.delayedCall(260, () => { if (!this.dead) this.blackout = 0; });
+      audio.play('fan_stop', 0.2, 0.7);
     } else audio.play('whisper', 0.42, 0.7);
   }
 
